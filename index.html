@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Shoe Logger</title>
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Shoe Logger">
+<link rel="manifest" href="manifest.json">
+
+<style>
+:root{
+  --bg:#f2f2f7;
+  --card:#ffffff;
+  --text:#111111;
+  --sub:#6b7280;
+  --btn:#e5e7eb;
+  --btnText:#111;
+  --accent:#4f46e5;
+}
+body.dark{
+  --bg:#000;
+  --card:#1c1c1e;
+  --text:#fff;
+  --sub:#9ca3af;
+  --btn:#2c2c2e;
+  --btnText:#fff;
+}
+
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+body{
+  margin:0;
+  font-family:-apple-system, BlinkMacSystemFont, "SF Pro Text", sans-serif;
+  background:var(--bg);
+  color:var(--text);
+}
+
+.container{
+  padding:16px;
+  max-width:600px;
+  margin:auto;
+  padding-bottom:40px;
+}
+
+.header{
+  padding-top:calc(18px + env(safe-area-inset-top));
+  padding-bottom:10px;
+  text-align:center;
+}
+.logo{
+  font-weight:700;
+  font-size:26px;
+  letter-spacing:0.4px;
+}
+
+.controls{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:8px;
+  margin-bottom:12px;
+}
+.controls button{
+  background:var(--btn);
+  color:var(--btnText);
+  border:none;
+  padding:11px;
+  border-radius:14px;
+  font-size:14px;
+}
+
+button{
+  transition:transform 0.1s ease;
+}
+button:active{
+  transform:scale(0.96);
+}
+
+.shoe{
+  background:var(--card);
+  padding:12px;
+  border-radius:18px;
+  margin-bottom:10px;
+  position:relative;
+  display:flex;
+  gap:12px;
+  align-items:center;
+  box-shadow:0 2px 6px rgba(0,0,0,0.04);
+}
+.shoe img{
+  width:64px;
+  height:64px;
+  border-radius:12px;
+  object-fit:cover;
+}
+.edit{
+  position:absolute;
+  top:10px;
+  right:12px;
+  width:18px;
+  height:18px;
+  opacity:0.6;
+}
+
+.log-btn{
+  width:100%;
+  padding:9px;
+  margin-top:6px;
+  border-radius:10px;
+  font-size:13px;
+  background:var(--accent);
+  color:#fff;
+  border:none;
+}
+
+.modal{
+  position:fixed;
+  top:0;
+  left:0;
+  width:100%;
+  height:100%;
+  background:rgba(0,0,0,0.25);
+  backdrop-filter:blur(6px);
+  display:none;
+  align-items:flex-end;
+}
+.modal-content{
+  position:relative;
+  background:var(--card);
+  width:100%;
+  padding:20px;
+  border-radius:20px 20px 0 0;
+  animation:springUp 0.5s cubic-bezier(.34,1.56,.64,1);
+}
+@keyframes springUp{
+  0%{transform:translateY(100%);} 
+  60%{transform:translateY(-8%);} 
+  100%{transform:translateY(0);} 
+}
+
+.close-x{
+  position:absolute;
+  top:14px;
+  right:18px;
+  font-size:22px;
+  font-weight:600;
+  color:var(--sub);
+}
+
+.modal input{
+  width:100%;
+  margin-bottom:10px;
+  padding:13px;
+  border-radius:12px;
+  border:1px solid #ddd;
+  font-size:15px;
+}
+
+.random-display{
+  text-align:center;
+  font-size:20px;
+  font-weight:600;
+  padding:14px 0;
+}
+
+#historyList{margin-top:10px;}
+.history-item{
+  display:flex;
+  justify-content:space-between;
+  padding:12px 0;
+  border-bottom:1px solid rgba(0,0,0,0.05);
+}
+.history-name{font-weight:500;}
+.history-date{color:var(--sub);font-size:13px;}
+</style>
+</head>
+
+<body>
+<div class="header">
+  <div class="logo">Shoe Logger</div>
+</div>
+
+<div class="container">
+<div class="controls">
+<button onclick="openAdd()">Add</button>
+<button onclick="randomPick()">Random</button>
+<button onclick="toggleDark()">Dark</button>
+<button onclick="openHistory()">History</button>
+</div>
+<div id="list"></div>
+</div>
+
+<div id="modal" class="modal">
+<div class="modal-content">
+<div class="close-x" onclick="closeModal()">×</div>
+<h3 id="modalTitle">Add Shoe</h3>
+<input id="name" placeholder="Shoe Name">
+<input id="count" type="number" placeholder="Times worn">
+<input type="file" id="image">
+<button onclick="saveShoe()">Save</button>
+</div>
+</div>
+
+<div id="historyModal" class="modal">
+<div class="modal-content">
+<div class="close-x" onclick="closeHistory()">×</div>
+<h3>Wear History</h3>
+<div id="historyList"></div>
+</div>
+</div>
+
+<div id="randomModal" class="modal">
+<div class="modal-content">
+<div class="close-x" onclick="closeRandom()">×</div>
+<h3>Today's Pick</h3>
+<div id="randomResult" class="random-display"></div>
+<img id="randomImage" style="width:100%;max-width:220px;margin:auto;display:block;border-radius:14px;">
+</div>
+</div>
+
+<script>
+let shoes = JSON.parse(localStorage.getItem('shoes') || '[]');
+let editIndex = null;
+
+function save(){localStorage.setItem('shoes', JSON.stringify(shoes));}
+
+function render(){
+const list=document.getElementById('list');
+list.innerHTML='';
+
+shoes.forEach(function(s,i){
+const div=document.createElement('div');
+div.className='shoe';
+
+const img=document.createElement('img');
+img.src=s.image||'https://source.unsplash.com/featured/?sneakers';
+
+const info=document.createElement('div');
+info.style.flex='1';
+info.innerHTML='<div>'+s.name+'</div>'+
+'<div style="font-size:12px;color:var(--sub)">Worn: '+(s.count||0)+'</div>'+
+'<div style="font-size:12px;color:var(--sub)">Last: '+(s.lastWorn||'Never')+'</div>'+
+'<button class="log-btn" onclick="logWear('+i+')">Log Wear</button>';
+
+const icon=document.createElementNS('http://www.w3.org/2000/svg','svg');
+icon.setAttribute('viewBox','0 0 24 24');
+icon.classList.add('edit');
+icon.innerHTML='<path fill="currentColor" d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25z"/>';
+icon.onclick=function(){edit(i);};
+
+div.appendChild(icon);
+div.appendChild(img);
+div.appendChild(info);
+list.appendChild(div);
+});
+}
+
+function openAdd(){editIndex=null;document.getElementById('modalTitle').innerText='Add Shoe';document.getElementById('name').value='';document.getElementById('count').value='';document.getElementById('modal').style.display='flex';}
+function edit(i){editIndex=i;document.getElementById('modalTitle').innerText='Edit Shoe';document.getElementById('name').value=shoes[i].name;document.getElementById('count').value=shoes[i].count||0;document.getElementById('modal').style.display='flex';}
+function closeModal(){document.getElementById('modal').style.display='none';}
+
+function saveShoe(){
+const name=document.getElementById('name').value;
+const count=parseInt(document.getElementById('count').value)||0;
+const file=document.getElementById('image').files[0];
+
+if(editIndex===null){
+const newShoe={name:name,count:count,image:'',lastWorn:null};
+if(file){const r=new FileReader();r.onload=function(e){newShoe.image=e.target.result;shoes.push(newShoe);save();render();};r.readAsDataURL(file);}else{shoes.push(newShoe);save();render();}
+}else{
+if(name) shoes[editIndex].name=name;
+shoes[editIndex].count=count;
+if(file){const r=new FileReader();r.onload=function(e){shoes[editIndex].image=e.target.result;save();render();};r.readAsDataURL(file);}else{save();render();}
+}
+closeModal();
+}
+
+function logWear(i){shoes[i].count=(shoes[i].count||0)+1;shoes[i].lastWorn=new Date().toLocaleDateString();save();render();}
+
+function randomPick(){
+if(shoes.length===0){alert('No shoes added');return;}
+const index=Math.floor(Math.random()*shoes.length);
+const shoe=shoes[index];
+document.getElementById('randomResult').innerText=shoe.name;
+const img=document.getElementById('randomImage');
+img.src=shoe.image||'https://source.unsplash.com/featured/?sneakers';
+document.getElementById('randomModal').style.display='flex';
+}
+function closeRandom(){document.getElementById('randomModal').style.display='none';}
+
+function toggleDark(){document.body.classList.toggle('dark');}
+
+function openHistory(){
+const list=document.getElementById('historyList');
+list.innerHTML='';
+const entries=shoes.filter(function(s){return s.lastWorn;}).sort(function(a,b){return new Date(b.lastWorn)-new Date(a.lastWorn);});
+entries.forEach(function(s){
+const row=document.createElement('div');
+row.className='history-item';
+const name=document.createElement('div');name.className='history-name';name.textContent=s.name;
+const date=document.createElement('div');date.className='history-date';date.textContent=s.lastWorn;
+row.appendChild(name);row.appendChild(date);list.appendChild(row);
+});
+document.getElementById('historyModal').style.display='flex';
+}
+function closeHistory(){document.getElementById('historyModal').style.display='none';}
+
+render();
+if('serviceWorker' in navigator){navigator.serviceWorker.register('sw.js');}
+</script>
+</body>
+</html>
