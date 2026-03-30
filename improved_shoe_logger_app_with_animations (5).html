@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Shoe Logger</title>
+
+<style>
+:root{
+  --bg:#f2f2f7;
+  --card:#ffffff;
+  --text:#111111;
+  --sub:#6b7280;
+  --btn:#e5e7eb;
+  --btnText:#111;
+  --accent:#4f46e5;
+}
+body.dark{
+  --bg:#000;
+  --card:#1c1c1e;
+  --text:#fff;
+  --sub:#9ca3af;
+  --btn:#2c2c2e;
+  --btnText:#fff;
+}
+
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+body{
+  margin:0;
+  font-family:-apple-system, BlinkMacSystemFont, "SF Pro Text", sans-serif;
+  background:var(--bg);
+  color:var(--text);
+  transition:background 0.4s ease, color 0.4s ease;
+}
+
+.container{padding:16px;max-width:600px;margin:auto;padding-bottom:40px;}
+.header{text-align:center;padding:20px 0;}
+.logo{font-weight:700;font-size:26px;}
+
+.controls{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px;}
+.controls button{background:var(--btn);color:var(--btnText);border:none;padding:11px;border-radius:14px;font-size:14px;transition:all 0.25s ease;}
+
+.dark-active{
+  border:3px solid var(--accent);
+  font-weight:700;
+  box-shadow:
+    0 0 0 3px rgba(79,70,229,0.3),
+    0 0 12px rgba(79,70,229,0.6),
+    0 0 20px rgba(79,70,229,0.5);
+}
+
+button:active{transform:scale(0.96);}
+
+.shoe{
+  background:var(--card);
+  padding:12px;
+  border-radius:18px;
+  margin-bottom:10px;
+  display:flex;
+  gap:12px;
+  align-items:center;
+  position:relative;
+}
+
+.shoe.ring::after{
+  content:"";
+  position:absolute;
+  inset:0;
+  border-radius:18px;
+  border:3px solid var(--accent);
+  opacity:0;
+  transform:scale(1);
+  animation:ringSmooth 0.6s ease-out;
+}
+
+@keyframes ringSmooth{
+  0%{opacity:0.9; transform:scale(1);} 
+  100%{opacity:0; transform:scale(1.12);} 
+}
+
+.shoe.log-animate{animation:popLog 0.4s ease;}
+@keyframes popLog{50%{transform:scale(1.08);}}
+
+.shoe img{width:64px;height:64px;border-radius:12px;object-fit:cover;}
+
+.log-btn{width:100%;margin-top:6px;padding:9px;border:none;border-radius:10px;background:var(--accent);color:#fff;}
+
+.confetti{
+  position:fixed;
+  width:10px;height:10px;
+  top:0;
+  animation:fall 1.2s linear forwards;
+}
+@keyframes fall{
+  to{transform:translateY(100vh) rotate(720deg);opacity:0;}
+}
+
+.modal{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.25);backdrop-filter:blur(6px);display:none;align-items:flex-end;}
+.modal-content{background:var(--card);width:100%;padding:20px;border-radius:20px 20px 0 0;animation:springUp 0.5s cubic-bezier(.34,1.56,.64,1);position:relative;}
+
+@keyframes springUp{0%{transform:translateY(100%);}60%{transform:translateY(-8%);}100%{transform:translateY(0);}}
+
+.close-x{position:absolute;top:14px;right:18px;font-size:22px;cursor:pointer;}
+
+input{width:100%;margin-bottom:10px;padding:13px;border-radius:12px;border:1px solid #ddd;}
+
+.history-item{display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid rgba(0,0,0,0.05);} 
+
+.random-img{width:100%;max-width:200px;border-radius:14px;margin:10px auto;display:block;}
+
+label{font-size:13px;color:var(--sub);}
+hr{border:none;height:1px;background:#ddd;}
+
+</style>
+</head>
+<body>
+
+<div class="header"><div class="logo">Shoe Logger</div></div>
+
+<div class="container">
+<div class="controls">
+<button onclick="openAdd()">Add</button>
+<button onclick="randomPick()">Random</button>
+<button id="darkBtn" onclick="toggleDark()">Dark</button>
+<button onclick="openHistory()">History</button>
+</div>
+<div id="list"></div>
+</div>
+
+<div id="modal" class="modal"><div class="modal-content">
+<div class="close-x" onclick="closeModal('modal')">×</div>
+<h3>Add Shoe</h3>
+
+<!-- MANUAL ADD SECTION -->
+<label>Shoe Name</label>
+<input id="name" placeholder="e.g. Nike Air Max">
+
+<label>Times Worn</label>
+<input id="count" type="number" placeholder="0">
+
+<label>Upload Image</label>
+<input type="file" id="image" accept="image/*">
+
+<button onclick="saveShoe()" style="margin-top:10px;">Add Shoe</button>
+
+<!-- DIVIDER -->
+<div style="text-align:center;margin:18px 0;font-size:12px;color:var(--sub);">
+  ───── OR ─────
+</div>
+
+<!-- CSV IMPORT SECTION -->
+<label>Import Shoes (CSV)</label>
+<input type="file" id="csvFile" accept=".csv">
+<button onclick="importCSV()">Import CSV</button>
+</div></div>
+
+<div id="randomModal" class="modal"><div class="modal-content">
+<div class="close-x" onclick="closeModal('randomModal')">×</div>
+<h3>Today's Pick</h3>
+<div id="randomResult"></div>
+<img id="randomImage" class="random-img">
+</div></div>
+
+<div id="historyModal" class="modal"><div class="modal-content">
+<div class="close-x" onclick="closeModal('historyModal')">×</div>
+<h3>History</h3>
+<div id="historyList"></div>
+</div></div>
+
+<script>
+let shoes = JSON.parse(localStorage.getItem('shoes') || '[]');
+
+function save(){localStorage.setItem('shoes', JSON.stringify(shoes));}
+
+function render(){
+const list=document.getElementById('list');
+list.innerHTML='';
+
+shoes.forEach((s,i)=>{
+const div=document.createElement('div');
+div.className='shoe';
+
+const last = s.lastWorn || 'Never';
+const imgSrc = s.image || 'https://source.unsplash.com/featured/?sneakers';
+
+div.innerHTML=`
+<img src="${imgSrc}">
+<div style="flex:1">
+<div>${s.name}</div>
+<div style="font-size:12px;color:var(--sub)">Worn: ${s.count||0}</div>
+<div style="font-size:12px;color:var(--sub)">Last: ${last}</div>
+<button class="log-btn" onclick="logWear(${i}, this)">Log Wear</button>
+</div>`;
+
+list.appendChild(div);
+});
+}
+
+function logWear(i, btn){
+shoes[i].count=(shoes[i].count||0)+1;
+shoes[i].lastWorn=new Date().toLocaleDateString();
+save();
+
+const card = btn.closest('.shoe');
+card.classList.add('log-animate','ring');
+createConfetti();
+
+setTimeout(()=>{
+card.classList.remove('log-animate','ring');
+render();
+},600);
+}
+
+function createConfetti(){
+for(let i=0;i<50;i++){
+const c=document.createElement('div');
+c.className='confetti';
+c.style.left=Math.random()*100+'vw';
+c.style.background=`hsl(${Math.random()*360},100%,50%)`;
+document.body.appendChild(c);
+setTimeout(()=>c.remove(),1200);
+}
+}
+
+function toggleDark(){
+document.body.classList.toggle('dark');
+document.getElementById('darkBtn').classList.toggle('dark-active');
+}
+
+function closeModal(id){
+document.getElementById(id).style.display='none';}
+
+function openAdd(){document.getElementById('modal').style.display='flex';}
+
+function saveShoe(){
+const name=document.getElementById('name').value;
+const count=parseInt(document.getElementById('count').value)||0;
+const file=document.getElementById('image').files[0];
+
+const newShoe={name,count,lastWorn:null,image:''};
+
+if(file){
+const reader=new FileReader();
+reader.onload=(e)=>{
+newShoe.image=e.target.result;
+shoes.push(newShoe);
+save();
+render();
+};
+reader.readAsDataURL(file);
+}else{
+shoes.push(newShoe);
+save();
+render();
+}
+
+closeModal('modal');
+}
+
+function importCSV(){
+const file=document.getElementById('csvFile').files[0];
+if(!file){alert('Select a CSV file');return;}
+
+const reader=new FileReader();
+reader.onload=(e)=>{
+const text=e.target.result;
+const rows=text.split(/\r?\n/).map(r=>r.trim()).filter(r=>r);
+
+let countImported=0;
+
+rows.forEach((row,i)=>{
+if(i===0 && row.toLowerCase().includes('name')) return;
+
+const cols=row.split(',');
+if(!cols[0]) return;
+
+const name=cols[0].trim();
+const count=parseInt(cols[1])||0;
+const lastWorn=cols[2]?cols[2].trim():null;
+const image=cols[3]?cols[3].trim():'';
+
+shoes.push({name,count,lastWorn,image});
+countImported++;
+});
+
+save();
+render();
+alert(countImported+' shoes imported');
+};
+reader.readAsText(file);
+}
+
+function randomPick(){
+if(shoes.length===0){alert('No shoes added');return;}
+const shoe=shoes[Math.floor(Math.random()*shoes.length)];
+document.getElementById('randomResult').innerText=shoe.name;
+document.getElementById('randomImage').src=shoe.image || 'https://source.unsplash.com/featured/?sneakers';
+document.getElementById('randomModal').style.display='flex';
+}
+
+function openHistory(){
+const list=document.getElementById('historyList');
+list.innerHTML='';
+
+const sorted = shoes.filter(s=>s.lastWorn).sort((a,b)=>new Date(b.lastWorn)-new Date(a.lastWorn));
+
+sorted.forEach(s=>{
+const row=document.createElement('div');
+row.className='history-item';
+row.innerHTML=`<div>${s.name}</div><div>${s.lastWorn}</div>`;
+list.appendChild(row);
+});
+
+document.getElementById('historyModal').style.display='flex';
+}
+
+render();
+</script>
+</body>
+</html>
