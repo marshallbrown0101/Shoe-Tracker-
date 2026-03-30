@@ -1,0 +1,453 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>Shoe Vault Pro</title>
+
+<style>
+:root {
+    --bg: #f0f2f8;
+    --glass: rgba(255, 255, 255, 0.7);
+    --card: #ffffff;
+    --text: #1a1a1a;
+    --accent: #6366f1;
+    --accent-gradient: linear-gradient(135deg, #6366f1 0%, #a855f7 100%);
+    --shadow: 0 10px 30px rgba(0,0,0,0.05);
+    --safe-top: env(safe-area-inset-top);
+    --safe-bottom: env(safe-area-inset-bottom);
+}
+
+body.dark {
+    --bg: #0a0a0c;
+    --glass: rgba(28, 28, 30, 0.7);
+    --card: #1c1c1e;
+    --text: #ffffff;
+    --shadow: 0 10px 40px rgba(0,0,0,0.4);
+}
+
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; outline: none; }
+
+body {
+    margin: 0;
+    font-family: -apple-system, system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    transition: background 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+    overflow-x: hidden;
+    min-height: 100vh;
+}
+
+/* Dynamic Header */
+.header {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    padding-top: var(--safe-top);
+    background: var(--glass);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border-bottom: 1px solid rgba(150,150,150,0.1);
+    animation: slideDown 0.8s ease;
+}
+
+.header-content {
+    padding: 15px 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.logo-text {
+    font-weight: 900;
+    font-size: 20px;
+    letter-spacing: -0.5px;
+    background: var(--accent-gradient);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+/* Floating Search */
+.search-container {
+    padding: 10px 20px;
+    margin-top: 10px;
+}
+
+.search-box {
+    width: 100%;
+    padding: 16px 20px;
+    border-radius: 20px;
+    border: none;
+    background: var(--card);
+    color: var(--text);
+    font-size: 17px;
+    box-shadow: var(--shadow);
+    transition: transform 0.3s ease;
+}
+
+.search-box:focus { transform: scale(1.02); }
+
+/* Grid Layout */
+.container {
+    padding: 10px 20px calc(var(--safe-bottom) + 100px) 20px;
+    max-width: 600px;
+    margin: auto;
+}
+
+/* Shoe Card Animation */
+@keyframes reveal {
+    from { opacity: 0; transform: translateY(30px) scale(0.9); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.shoe-card {
+    background: var(--card);
+    border-radius: 28px;
+    padding: 12px;
+    margin-bottom: 20px;
+    display: flex;
+    gap: 15px;
+    box-shadow: var(--shadow);
+    animation: reveal 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+.shoe-img-wrapper {
+    width: 100px;
+    height: 100px;
+    position: relative;
+}
+
+.shoe-card img {
+    width: 100%;
+    height: 100%;
+    border-radius: 22px;
+    object-fit: cover;
+}
+
+.wear-badge {
+    position: absolute;
+    top: -5px;
+    right: -5px;
+    background: var(--accent-gradient);
+    color: white;
+    font-size: 10px;
+    font-weight: 800;
+    padding: 4px 8px;
+    border-radius: 10px;
+    box-shadow: 0 4px 10px rgba(99, 102, 241, 0.4);
+}
+
+.shoe-info { flex: 1; display: flex; flex-direction: column; justify-content: center; }
+
+.shoe-name { font-weight: 800; font-size: 17px; margin-bottom: 4px; }
+.shoe-date { font-size: 12px; color: var(--sub); margin-bottom: 12px; }
+
+.btn-group { display: flex; gap: 8px; }
+
+.log-btn {
+    flex: 1;
+    background: var(--accent-gradient);
+    color: white;
+    border: none;
+    padding: 12px;
+    border-radius: 14px;
+    font-weight: 700;
+    font-size: 13px;
+    box-shadow: 0 4px 15px rgba(99, 102, 241, 0.2);
+}
+
+.del-btn {
+    width: 44px;
+    background: var(--btn);
+    border: none;
+    border-radius: 14px;
+    color: var(--danger);
+    font-size: 18px;
+}
+
+/* Floating Bottom Nav */
+.nav-bar {
+    position: fixed;
+    bottom: calc(var(--safe-bottom) + 20px);
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--glass);
+    backdrop-filter: blur(25px);
+    -webkit-backdrop-filter: blur(25px);
+    padding: 8px;
+    border-radius: 24px;
+    display: flex;
+    gap: 5px;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.15);
+    z-index: 1000;
+}
+
+.nav-btn {
+    border: none;
+    background: transparent;
+    color: var(--text);
+    padding: 12px 18px;
+    border-radius: 18px;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    transition: 0.3s;
+}
+
+.nav-btn.active {
+    background: var(--card);
+    box-shadow: var(--shadow);
+}
+
+/* Modals */
+.modal {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.5);
+    display: none;
+    align-items: flex-end;
+    z-index: 2000;
+    animation: fadeIn 0.3s ease;
+}
+
+.modal-content {
+    width: 100%;
+    background: var(--card);
+    border-radius: 35px 35px 0 0;
+    padding: 30px 25px calc(var(--safe-bottom) + 30px);
+    transform: translateY(100%);
+    transition: transform 0.4s cubic-bezier(0.1, 0.7, 0.1, 1);
+}
+
+.modal.show { display: flex; }
+.modal.show .modal-content { transform: translateY(0); }
+
+input, select {
+    width: 100%;
+    background: var(--bg);
+    border: 1px solid rgba(0,0,0,0.05);
+    padding: 18px;
+    border-radius: 18px;
+    margin-bottom: 15px;
+    font-size: 16px;
+    color: var(--text);
+}
+
+.toast {
+    position: fixed;
+    top: calc(var(--safe-top) + 20px);
+    left: 50%;
+    transform: translateX(-50%) translateY(-100px);
+    background: var(--text);
+    color: var(--card);
+    padding: 12px 25px;
+    border-radius: 20px;
+    font-weight: 700;
+    transition: 0.5s cubic-bezier(0.18, 0.89, 0.32, 1.28);
+    z-index: 9999;
+}
+.toast.active { transform: translateX(-50%) translateY(0); }
+
+</style>
+</head>
+<body>
+
+<div id="toast" class="toast">Action Confirmed</div>
+
+<header class="header">
+    <div class="header-content">
+        <span class="logo-text">VAULT.</span>
+        <button onclick="toggleDark()" id="modeBtn" style="background:none; border:none; font-size:20px;">◑</button>
+    </div>
+    <div class="search-container">
+        <input type="text" class="search-box" id="searchInput" placeholder="Find your pair..." oninput="render()">
+    </div>
+</header>
+
+<main class="container" id="shoeList"></main>
+
+<nav class="nav-bar">
+    <button class="nav-btn" onclick="openModal('addModal')">Add</button>
+    <button class="nav-btn" onclick="randomPick()">Pick</button>
+    <button class="nav-btn" onclick="openHistory()">History</button>
+</nav>
+
+<div id="addModal" class="modal" onclick="if(event.target==this)closeModal('addModal')">
+    <div class="modal-content">
+        <h2 style="margin-top:0">New Addition</h2>
+        <input id="newName" placeholder="Model Name" type="text">
+        <input id="newCount" placeholder="Current Wears" type="number">
+        <input type="file" id="newImage" accept="image/*" capture="environment" onchange="updateUploadLabel()">
+        <button class="log-btn" style="width:100%; padding:18px;" onclick="saveShoe()">Add to Vault</button>
+        <div style="height:20px"></div>
+        <button class="del-btn" style="width:100%; color:var(--text)" onclick="document.getElementById('csvIn').click()">Import CSV</button>
+        <input type="file" id="csvIn" style="display:none" accept=".csv" onchange="importCSV()">
+    </div>
+</div>
+
+<div id="randomModal" class="modal" onclick="if(event.target==this)closeModal('randomModal')">
+    <div class="modal-content" style="text-align:center">
+        <h3>Choice of the Day</h3>
+        <img id="randomImage" style="width:100%; border-radius:25px; height:250px; object-fit:cover; margin-bottom:15px">
+        <h2 id="randomResult" style="margin-bottom:20px"></h2>
+        <button class="log-btn" style="width:100%;" onclick="closeModal('randomModal')">Ready</button>
+    </div>
+</div>
+
+<div id="historyModal" class="modal" onclick="if(event.target==this)closeModal('historyModal')">
+    <div class="modal-content">
+        <h3>History</h3>
+        <div id="historyBody" style="max-height:40vh; overflow-y:auto"></div>
+        <button class="log-btn" style="width:100%; margin-top:20px" onclick="closeModal('historyModal')">Close</button>
+    </div>
+</div>
+
+<script>
+let shoes = JSON.parse(localStorage.getItem('shoes') || '[]');
+
+function save() { localStorage.setItem('shoes', JSON.stringify(shoes)); }
+
+function render() {
+    const list = document.getElementById('shoeList');
+    const term = document.getElementById('searchInput').value.toLowerCase();
+    list.innerHTML = '';
+    
+    const filtered = shoes.filter(s => s.name.toLowerCase().includes(term));
+
+    filtered.forEach((s, i) => {
+        const idx = shoes.indexOf(s);
+        const card = document.createElement('div');
+        card.className = 'shoe-card';
+        card.style.animationDelay = `${i * 0.05}s`;
+        
+        card.innerHTML = `
+            <div class="shoe-img-wrapper">
+                <img src="${s.image || 'https://images.unsplash.com/photo-1600185365483-26d7a4cc7519?w=300'}">
+                <span class="wear-badge">${s.count || 0}</span>
+            </div>
+            <div class="shoe-info">
+                <div class="shoe-name">${s.name}</div>
+                <div class="shoe-date">${s.lastWorn || 'Not worn yet'}</div>
+                <div class="btn-group">
+                    <button class="log-btn" onclick="logWear(${idx})">WEAR</button>
+                    <button class="del-btn" onclick="deleteShoe(${idx})">✕</button>
+                </div>
+            </div>
+        `;
+        list.appendChild(card);
+    });
+}
+
+function logWear(i) {
+    shoes[i].count = (shoes[i].count || 0) + 1;
+    shoes[i].lastWorn = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    save();
+    showToast("Wear Logged");
+    render();
+}
+
+function showToast(msg) {
+    const t = document.getElementById('toast');
+    t.innerText = msg;
+    t.classList.add('active');
+    setTimeout(() => t.classList.remove('active'), 2500);
+}
+
+function deleteShoe(i) {
+    if(confirm("Erase from vault?")) {
+        shoes.splice(i, 1);
+        save();
+        render();
+    }
+}
+
+async function saveShoe() {
+    const name = document.getElementById('newName').value;
+    const count = parseInt(document.getElementById('newCount').value) || 0;
+    const file = document.getElementById('newImage').files[0];
+    if(!name) return;
+    
+    let imgData = "";
+    if(file) imgData = await compressImage(file);
+    
+    shoes.push({ name, count, lastWorn: null, image: imgData });
+    save();
+    render();
+    closeModal('addModal');
+}
+
+function compressImage(file) {
+    return new Promise(resolve => {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            const img = new Image();
+            img.onload = () => {
+                const canvas = document.createElement('canvas');
+                const MAX = 400;
+                let w = img.width, h = img.height;
+                if (w > h) { if (w > MAX) { h *= MAX/w; w = MAX; } }
+                else { if (h > MAX) { w *= MAX/h; h = MAX; } }
+                canvas.width = w; canvas.height = h;
+                canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+                resolve(canvas.toDataURL('image/jpeg', 0.7));
+            };
+            img.src = e.target.result;
+        };
+        reader.readAsDataURL(file);
+    });
+}
+
+function randomPick() {
+    if(shoes.length === 0) return;
+    const s = shoes[Math.floor(Math.random() * shoes.length)];
+    document.getElementById('randomResult').innerText = s.name;
+    document.getElementById('randomImage').src = s.image || 'https://images.unsplash.com/photo-1600185365483-26d7a4cc7519?w=300';
+    openModal('randomModal');
+}
+
+function toggleDark() {
+    document.body.classList.toggle('dark');
+}
+
+function openModal(id) {
+    const m = document.getElementById(id);
+    m.classList.add('show');
+}
+
+function closeModal(id) {
+    const m = document.getElementById(id);
+    m.classList.remove('show');
+}
+
+function openHistory() {
+    const body = document.getElementById('historyBody');
+    body.innerHTML = '';
+    const items = [...shoes].filter(s => s.lastWorn).sort((a,b) => new Date(b.lastWorn) - new Date(a.lastWorn));
+    items.forEach(s => {
+        body.innerHTML += `<div style="display:flex; justify-content:space-between; padding:15px 0; border-bottom:1px solid rgba(150,150,150,0.1)">
+            <strong>${s.name}</strong> <span>${s.lastWorn}</span>
+        </div>`;
+    });
+    openModal('historyModal');
+}
+
+function importCSV() {
+    const file = document.getElementById('csvIn').files[0];
+    if(!file) return;
+    const reader = new FileReader();
+    reader.onload = (e) => {
+        const rows = e.target.result.split('\n');
+        for(let i=1; i<rows.length; i++) {
+            const cols = rows[i].split(',');
+            if(cols[0]) shoes.push({ name: cols[0], image: cols[1], count: parseInt(cols[3]) || 0, lastWorn: null });
+        }
+        save(); render(); closeModal('addModal');
+    };
+    reader.readAsText(file);
+}
+
+render();
+</script>
+</body>
+</html>
